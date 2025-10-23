@@ -319,13 +319,14 @@ class ControlNet(nn.Module):
 
 class ControlLDM(LatentDiffusion):
 
-    def __init__(self, control_stage_config, control_key, only_mid_control, *args, **kwargs): #freeze
+    def __init__(self, control_stage_config, control_key, only_mid_control, sd_locked=True, *args, **kwargs):
         # print(control_stage_config)
         super().__init__(*args, **kwargs)
         self.control_model = instantiate_from_config(control_stage_config)
         self.control_key = control_key
         self.only_mid_control = only_mid_control
         self.control_scales = [1.0] * 13
+        self.sd_locked = sd_locked
     #     if freeze==True:
     #         self.freeze()
 

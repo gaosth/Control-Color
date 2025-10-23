@@ -257,8 +257,13 @@ def main():
     # 冻结UNet（如果需要）
     if opt.freeze_unet:
         print("Freezing UNet parameters...")
+        model.sd_locked = True  # 设置sd_locked，避免configure_optimizers添加UNet参数
         for param in model.model.diffusion_model.parameters():
             param.requires_grad = False
+        print("✓ UNet frozen, only ControlNet will be trained")
+    else:
+        # 确保sd_locked设置正确
+        model.sd_locked = False
 
     # 移到GPU
     model = model.cuda()
