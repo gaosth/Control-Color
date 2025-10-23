@@ -296,8 +296,8 @@ def main():
         # 确保sd_locked设置正确
         model.sd_locked = False
 
-    # 移到GPU
-    model = model.cuda()
+    # Note: Do not manually move model to GPU when using PyTorch Lightning
+    # Lightning will handle device placement automatically in multi-GPU setup
 
     # 创建callbacks
     callbacks = []
@@ -337,6 +337,7 @@ def main():
         "max_epochs": opt.max_epochs,
         "accelerator": "gpu",
         "devices": gpus,
+        "strategy": "ddp_find_unused_parameters_true" if len(gpus) > 1 else "auto",
         "precision": 16,
         "accumulate_grad_batches": 1,
         "gradient_clip_val": 1.0,
@@ -345,6 +346,13 @@ def main():
         "log_every_n_steps": 50,
         "num_sanity_val_steps": 0,
     }
+
+    # 多卡训练提示
+    if len(gpus) > 1:
+        print(f"\n使用 {len(gpus)} 张GPU进行分布式训练 (DDP模式)")
+        print(f"GPU设备: {gpus}")
+        print(f"每张GPU的batch size: {opt.batch_size}")
+        print(f"实际总batch size: {opt.batch_size * len(gpus)}\n")
 
     if os.path.exists(opt.val_list):
         # 有验证集：每个epoch结束时验证
