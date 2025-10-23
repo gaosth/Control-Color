@@ -306,7 +306,6 @@ def main():
         "max_epochs": opt.max_epochs,
         "accelerator": "gpu",
         "devices": gpus,
-        "strategy": "ddp_find_unused_parameters_true" if len(gpus) > 1 else "auto",
         "precision": 16,
         "accumulate_grad_batches": 1,
         "gradient_clip_val": 1.0,
@@ -316,8 +315,9 @@ def main():
         "num_sanity_val_steps": 0,
     }
 
-    # 多卡训练提示
+    # 多卡训练提示和策略设置
     if len(gpus) > 1:
+        trainer_kwargs["strategy"] = "ddp_find_unused_parameters_true"
         print(f"\n使用 {len(gpus)} 张GPU进行分布式训练 (DDP模式)")
         print(f"GPU设备: {gpus}")
         print(f"每张GPU的batch size: {opt.batch_size}")
