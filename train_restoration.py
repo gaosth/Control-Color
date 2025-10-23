@@ -329,6 +329,19 @@ def main():
     # 解析GPU设置
     gpus = [int(x) for x in opt.gpus.split(',')]
 
+    # 计算训练batch数，动态设置验证间隔
+    num_train_batches = len(data.datasets_train) // opt.batch_size
+
+    # 根据batch数设置合理的验证间隔
+    if os.path.exists(opt.val_list):
+        # 有验证集：每个epoch验证一次
+        val_check_interval = None
+        check_val_every_n_epoch = 1
+    else:
+        # 无验证集：不验证
+        val_check_interval = None
+        check_val_every_n_epoch = None
+
     # 创建Trainer
     trainer = Trainer(
         max_epochs=opt.max_epochs,
@@ -340,8 +353,8 @@ def main():
         callbacks=callbacks,
         logger=logger,
         log_every_n_steps=50,
-        val_check_interval=1000 if os.path.exists(opt.val_list) else 10000,
-        check_val_every_n_epoch=1 if os.path.exists(opt.val_list) else None,
+        val_check_interval=val_check_interval,
+        check_val_every_n_epoch=check_val_every_n_epoch,
         num_sanity_val_steps=0
     )
 
