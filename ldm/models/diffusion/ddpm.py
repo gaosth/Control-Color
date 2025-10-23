@@ -848,8 +848,16 @@ class LatentDiffusion(DDPM):
         # print("batch",batch)
         # print("k",k)
         x = super().get_input(batch, k)
-        masked_image=batch[self.masked_image]
-        mask=batch[self.mask]
+        masked_image = batch[self.masked_image]
+        mask = batch[self.mask]
+
+        # Rearrange mask and masked_image from (b h w c) to (b c h w)
+        masked_image = rearrange(masked_image, 'b h w c -> b c h w')
+        masked_image = masked_image.to(memory_format=torch.contiguous_format).float()
+
+        mask = rearrange(mask, 'b h w c -> b c h w')
+        mask = mask.to(memory_format=torch.contiguous_format).float()
+
         # print(mask.shape,masked_image.shape)
         mask = torch.nn.functional.interpolate(mask, size=(mask.shape[2] // 8, mask.shape[3] // 8))
         # mask=torch.cat([mask] * 2) #if do_classifier_free_guidance else mask
