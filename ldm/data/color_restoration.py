@@ -194,8 +194,22 @@ class ColorRestorationDataset(Dataset):
             image = image.convert("RGB")
         image = np.array(image).astype(np.uint8)
 
+        # 确保是3通道图像
+        if len(image.shape) == 2:
+            # 灰度图，转换为3通道
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        elif image.shape[2] == 1:
+            # 单通道图，转换为3通道
+            image = np.repeat(image, 3, axis=2)
+
         # 数据增强
         image = self.augmentation(image=image)["image"]
+
+        # 再次确保是3通道（数据增强后）
+        if len(image.shape) == 2:
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        elif image.shape[2] != 3:
+            raise ValueError(f"Image has wrong number of channels: {image.shape}")
 
         return image
 
@@ -219,8 +233,8 @@ class ColorRestorationDataset(Dataset):
         if np.random.rand() > 0.3:
             return np.ones((height, width, 1), dtype=np.float32)
 
-        # 生成随机mask
-        mask = np.zeros((height, width, 1), dtype=np.float32)
+        # 生成随机mask (先用2D)
+        mask = np.zeros((height, width), dtype=np.float32)
         num_regions = np.random.randint(1, 5)
 
         for _ in range(num_regions):
@@ -237,9 +251,12 @@ class ColorRestorationDataset(Dataset):
 
             mask[y1:y2, x1:x2] = 1.0
 
-        # 膨胀操作
+        # 膨胀操作 (在2D上操作)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
         mask = cv2.dilate(mask, kernel, iterations=1)
+
+        # 扩展到3D (H, W, 1)
+        mask = mask[:, :, np.newaxis]
 
         return mask
 

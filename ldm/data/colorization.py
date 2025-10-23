@@ -89,8 +89,22 @@ class ColorizationDataset(Dataset):
             image = image.convert("RGB")
         image = np.array(image).astype(np.uint8)
 
+        # Ensure image has 3 channels (handle grayscale images)
+        if len(image.shape) == 2:
+            # Single channel grayscale
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        elif image.shape[2] == 1:
+            # Single channel with explicit dimension
+            image = np.repeat(image, 3, axis=2)
+
         # 数据增强
         image = self.augmentation(image=image)["image"]
+
+        # Verify 3 channels after augmentation (some augmentations might change shape)
+        if len(image.shape) == 2:
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        elif image.shape[2] != 3:
+            raise ValueError(f"Image has wrong number of channels after augmentation: {image.shape}")
 
         # 转换为LAB色彩空间
         image_lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
@@ -105,10 +119,11 @@ class ColorizationDataset(Dataset):
         """生成随机mask用于训练（模拟用户笔触）"""
         if not self.use_mask or np.random.rand() > 0.5:
             # 50%概率不使用mask（全图着色）
-            return np.ones((height, width, 1), dtype=np.float32)
+            mask = np.ones((height, width), dtype=np.float32)
+            return mask[:, :, np.newaxis]
 
-        # 生成随机mask
-        mask = np.zeros((height, width, 1), dtype=np.float32)
+        # 生成随机mask (2D first for cv2 operations)
+        mask = np.zeros((height, width), dtype=np.float32)
         num_strokes = np.random.randint(3, 10)
 
         for _ in range(num_strokes):
@@ -131,10 +146,12 @@ class ColorizationDataset(Dataset):
                 y2 = min(height, y + h // 2)
                 mask[y1:y2, x1:x2] = 1.0
 
-        # 膨胀操作（使mask边缘更自然）
+        # 膨胀操作（使mask边缘更自然） - must be done in 2D
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         mask = cv2.dilate(mask, kernel, iterations=1)
 
+        # Expand to 3D after all 2D operations
+        mask = mask[:, :, np.newaxis]
         return mask
 
     def __getitem__(self, idx):
