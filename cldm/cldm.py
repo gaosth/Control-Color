@@ -359,8 +359,8 @@ class ControlLDM(LatentDiffusion):
         else:
             control = self.control_model(x=x_noisy, hint=torch.cat(cond['c_concat'], 1), timesteps=t, context=cond_txt)
             control = [c * scale for c, scale in zip(control, self.control_scales)]
-            mask=torch.cat([mask] * x_noisy.shape[0])
-            masked_image_latents=torch.cat([masked_image_latents] * x_noisy.shape[0])
+            # mask and masked_image_latents already have correct batch size from get_input
+            # No need to concatenate them along batch dimension
             x_noisy = torch.cat([x_noisy,mask,masked_image_latents], dim=1)
             eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
 
