@@ -42,25 +42,34 @@ def log_txt_as_img(wh,masked_image, xc, size=10):
     b = len(xc)
     txts = list()
 
+    # Convert to tensor if needed
+    if not isinstance(masked_image, torch.Tensor):
+        masked_image = torch.from_numpy(masked_image)
+
     # Handle tensor shape: could be (B, H, W, C) or (B, C, H, W)
-    # Check if channels are in last dimension (> 4 means likely H or W, not C)
-    if masked_image.shape[-1] > 4:
-        # Shape is (B, H, W, C), need to permute to (B, C, H, W)
-        masked_image = masked_image.permute(0, 3, 1, 2)
+    # Check the shape to determine format
+    if len(masked_image.shape) == 4:
+        # Could be (B, C, H, W) or (B, H, W, C)
+        # If dimension 1 is small (<=4), it's likely channels: (B, C, H, W)
+        # If dimension 1 is large (>4), it's likely height: (B, H, W, C)
+        if masked_image.shape[1] > 4:
+            # Shape is (B, H, W, C), need to permute to (B, C, H, W)
+            masked_image = masked_image.permute(0, 3, 1, 2)
 
     for bi in range(b):
         txt = Image.new("RGB", wh, color="white")
-        # image=(image_withmask.squeeze(0)[:3,:,:]+1.)/2.
-        # mask=(image_withmask.squeeze(0)[3,:,:]+1.)/2.
-        # image=(image_withmask+1.)/2.
-        # # image =  get_hint_image(image_withmask)
-        # # print(image.shape)
-        # image_target=transforms.ToPILImage()(image.squeeze(0)).convert("RGB")
-        # # image_gray=transforms.ToPILImage()(image).convert("L")
 
-        # Extract the bi-th sample from the batch (handles both batch_size=1 and batch_size>1)
-        # Now masked_image is in (B, C, H, W) format
-        image = (masked_image[bi] + 1.) / 2.
+        # Extract the bi-th sample from the batch
+        # Now masked_image should be in (B, C, H, W) format
+        image = masked_image[bi]  # Shape: (C, H, W)
+
+        # Normalize to [0, 1]
+        image = (image + 1.) / 2.
+
+        # Ensure it's in the right range
+        image = torch.clamp(image, 0, 1)
+
+        # Convert to PIL Image
         image_target = transforms.ToPILImage()(image).convert("RGB")
         txt = image_target#get_hint_image(image_target,image_gray,mask)
         draw = ImageDraw.Draw(txt)
