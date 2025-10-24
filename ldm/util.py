@@ -41,6 +41,13 @@ def log_txt_as_img(wh,masked_image, xc, size=10):
     xc=xc
     b = len(xc)
     txts = list()
+
+    # Handle tensor shape: could be (B, H, W, C) or (B, C, H, W)
+    # Check if channels are in last dimension (> 4 means likely H or W, not C)
+    if masked_image.shape[-1] > 4:
+        # Shape is (B, H, W, C), need to permute to (B, C, H, W)
+        masked_image = masked_image.permute(0, 3, 1, 2)
+
     for bi in range(b):
         txt = Image.new("RGB", wh, color="white")
         # image=(image_withmask.squeeze(0)[:3,:,:]+1.)/2.
@@ -52,6 +59,7 @@ def log_txt_as_img(wh,masked_image, xc, size=10):
         # # image_gray=transforms.ToPILImage()(image).convert("L")
 
         # Extract the bi-th sample from the batch (handles both batch_size=1 and batch_size>1)
+        # Now masked_image is in (B, C, H, W) format
         image = (masked_image[bi] + 1.) / 2.
         image_target = transforms.ToPILImage()(image).convert("RGB")
         txt = image_target#get_hint_image(image_target,image_gray,mask)
