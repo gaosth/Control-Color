@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# PyTorch Lightning
+logs/
+logs_*/
+lightning_logs/
+
+# Checkpoints
+*.ckpt
+!pretrained_models/*.ckpt
+
+# Data
+data/
+*.jpg
+*.png
+*.jpeg
+*.JPG
+*.PNG
+*.JPEG
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.log
