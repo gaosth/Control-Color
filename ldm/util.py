@@ -82,7 +82,14 @@ def log_txt_as_img(wh,masked_image, xc, size=10):
         image_target = transforms.ToPILImage()(image).convert("RGB")
         txt = image_target#get_hint_image(image_target,image_gray,mask)
         draw = ImageDraw.Draw(txt)
-        font = ImageFont.truetype('font/DejaVuSans.ttf', size=size)
+
+        # Try to load font, fall back to default if not available
+        try:
+            font = ImageFont.truetype('font/DejaVuSans.ttf', size=size)
+        except (OSError, IOError):
+            # Font file not found, use default font
+            font = ImageFont.load_default()
+
         nc = int(40 * (wh[0] / 256))
         lines = "\n".join(xc[bi][start:start + nc] for start in range(0, len(xc[bi]), nc))
 
