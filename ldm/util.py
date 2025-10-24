@@ -50,8 +50,10 @@ def log_txt_as_img(wh,masked_image, xc, size=10):
         # # print(image.shape)
         # image_target=transforms.ToPILImage()(image.squeeze(0)).convert("RGB")
         # # image_gray=transforms.ToPILImage()(image).convert("L")
-        image=(masked_image.squeeze(0)+1.)/2.
-        image_target=transforms.ToPILImage()(image.squeeze(0)).convert("RGB")
+
+        # Extract the bi-th sample from the batch (handles both batch_size=1 and batch_size>1)
+        image = (masked_image[bi] + 1.) / 2.
+        image_target = transforms.ToPILImage()(image).convert("RGB")
         txt = image_target#get_hint_image(image_target,image_gray,mask)
         draw = ImageDraw.Draw(txt)
         font = ImageFont.truetype('font/DejaVuSans.ttf', size=size)
