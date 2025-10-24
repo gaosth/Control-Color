@@ -95,8 +95,13 @@ class RestorationImageLogger(pl.Callback):
         """记录图像对比：褪色图 -> 修复图 -> 原图"""
         logger = trainer.logger.experiment
 
-        # 获取输入
-        images = pl_module.log_images(batch, split=split)
+        try:
+            # 获取输入
+            images = pl_module.log_images(batch, split=split)
+        except Exception as e:
+            print(f"[WARNING] Failed to log images for {split}: {e}")
+            print(f"[WARNING] Skipping image logging for this batch. Training continues...")
+            return
 
         # 额外记录褪色图（如果有）
         if 'faded' in batch:
