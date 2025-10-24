@@ -190,6 +190,10 @@ class DDIMSampler(object):
         else:
             x_in = torch.cat([x] * 2)
             t_in = torch.cat([t] * 2)
+            # Also duplicate mask and masked_image_latents for classifier-free guidance
+            mask_in = torch.cat([mask] * 2) if mask is not None else None
+            masked_image_latents_in = torch.cat([masked_image_latents] * 2) if masked_image_latents is not None else None
+
             if isinstance(c, dict):
                 assert isinstance(unconditional_conditioning, dict)
                 c_in = dict()
@@ -209,7 +213,7 @@ class DDIMSampler(object):
                     c_in.append(torch.cat([unconditional_conditioning[i], c[i]]))
             else:
                 c_in = torch.cat([unconditional_conditioning, c])
-            model_uncond, model_t = self.model.apply_model(x_in,mask,masked_image_latents, t_in, c_in).chunk(2)
+            model_uncond, model_t = self.model.apply_model(x_in, mask_in, masked_image_latents_in, t_in, c_in).chunk(2)
             model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
 
         if self.model.parameterization == "v":
