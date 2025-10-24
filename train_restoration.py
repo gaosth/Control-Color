@@ -106,6 +106,11 @@ class RestorationImageLogger(pl.Callback):
         # 额外记录褪色图（如果有）
         if 'faded' in batch:
             faded = batch['faded'][:self.max_images]
+
+            # Convert from (B, H, W, C) to (B, C, H, W) if needed
+            if len(faded.shape) == 4 and faded.shape[-1] == 3:
+                faded = faded.permute(0, 3, 1, 2)
+
             faded = torch.clamp(faded, -1., 1.)
             faded = (faded + 1.0) / 2.0
             logger.add_images(f"{split}/faded_input", faded, global_step=trainer.global_step)
