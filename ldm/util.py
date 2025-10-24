@@ -46,9 +46,6 @@ def log_txt_as_img(wh,masked_image, xc, size=10):
     if not isinstance(masked_image, torch.Tensor):
         masked_image = torch.from_numpy(masked_image)
 
-    # Debug: print actual shape
-    print(f"[DEBUG] log_txt_as_img input shape: {masked_image.shape}")
-
     # Handle tensor shape: could be (B, H, W, C) or (B, C, H, W)
     # Check the shape to determine format
     if len(masked_image.shape) == 4:
@@ -57,9 +54,7 @@ def log_txt_as_img(wh,masked_image, xc, size=10):
         # If dimension 1 is large (>4), it's likely height: (B, H, W, C)
         if masked_image.shape[1] > 4:
             # Shape is (B, H, W, C), need to permute to (B, C, H, W)
-            print(f"[DEBUG] Detected (B,H,W,C) format, permuting to (B,C,H,W)")
             masked_image = masked_image.permute(0, 3, 1, 2)
-            print(f"[DEBUG] After permute: {masked_image.shape}")
 
     for bi in range(b):
         txt = Image.new("RGB", wh, color="white")
@@ -68,15 +63,11 @@ def log_txt_as_img(wh,masked_image, xc, size=10):
         # Now masked_image should be in (B, C, H, W) format
         image = masked_image[bi]  # Shape: (C, H, W)
 
-        print(f"[DEBUG] Batch {bi} image shape: {image.shape}")
-
         # Normalize to [0, 1]
         image = (image + 1.) / 2.
 
         # Ensure it's in the right range
         image = torch.clamp(image, 0, 1)
-
-        print(f"[DEBUG] Final image shape before ToPILImage: {image.shape}")
 
         # Convert to PIL Image
         image_target = transforms.ToPILImage()(image).convert("RGB")
