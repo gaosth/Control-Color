@@ -24,15 +24,17 @@ sys.path.insert(0, os.path.dirname(__file__))
 from ldm.data.color_restoration import simulate_color_fading, extract_color_mask
 
 
-def test_single_image(image_path, fade_type='mixed', intensity=0.5, output_dir='fading_test_results'):
+def test_single_image(image_path, fade_type='mixed', intensity=0.5, output_dir='fading_test_results',
+                     combined_effects=None):
     """
     测试单张图片的褪色效果
 
     Args:
         image_path: 图片路径
-        fade_type: 褪色类型 ('uniform', 'saturation', 'brightness', 'yellow', 'sepia', 'mixed')
+        fade_type: 褪色类型 ('uniform', 'saturation', 'brightness', 'yellow', 'sepia', 'mixed', 'combined')
         intensity: 褪色强度 (0-1)
         output_dir: 输出目录
+        combined_effects: 组合效果配置（当fade_type='combined'时使用）
     """
     # 创建输出目录
     os.makedirs(output_dir, exist_ok=True)
@@ -47,8 +49,14 @@ def test_single_image(image_path, fade_type='mixed', intensity=0.5, output_dir='
     print(f"Image shape: {image.shape}")
 
     # 应用褪色
-    print(f"Applying fading (type={fade_type}, intensity={intensity})...")
-    faded_image = simulate_color_fading(image, fade_type=fade_type, intensity=intensity)
+    if fade_type == 'combined' and combined_effects:
+        print(f"Applying combined fading (intensity={intensity})...")
+        print(f"  Effects: {combined_effects}")
+    else:
+        print(f"Applying fading (type={fade_type}, intensity={intensity})...")
+
+    faded_image = simulate_color_fading(image, fade_type=fade_type, intensity=intensity,
+                                       combined_effects=combined_effects)
 
     # 提取颜色hint
     color_hint = extract_color_mask(faded_image, image, 'faded_color')
@@ -191,19 +199,88 @@ def test_multiple_intensities(image_path, fade_type='mixed', output_dir='fading_
     plt.close()
 
 
+def test_combined_effects(image_path, intensity=0.5, output_dir='fading_test_results'):
+    """
+    测试组合褪色效果
+
+    Args:
+        image_path: 图片路径
+        intensity: 褪色强度
+        output_dir: 输出目录
+    """
+    # 创建输出目录
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 读取图片
+    print(f"Reading image: {image_path}")
+    image = Image.open(image_path)
+    if not image.mode == "RGB":
+        image = image.convert("RGB")
+    image = np.array(image).astype(np.uint8)
+
+    print(f"Image shape: {image.shape}")
+
+    # 不同的组合配置
+    combinations = [
+        ('Original', None, None),
+        ('Brightness + Yellow', 'combined',
+         {'brightness': intensity * 0.5, 'yellow': intensity * 0.6}),
+        ('Yellow + Sepia', 'combined',
+         {'yellow': intensity * 0.6, 'sepia': intensity * 0.4}),
+        ('Brightness + Sepia', 'combined',
+         {'brightness': intensity * 0.4, 'sepia': intensity * 0.5}),
+        ('All Three (B+Y+S)', 'combined',
+         {'brightness': intensity * 0.4, 'yellow': intensity * 0.6, 'sepia': intensity * 0.3}),
+        ('Complex Aging', 'combined',
+         {'brightness': intensity * 0.3, 'saturation': intensity * 0.4, 'yellow': intensity * 0.5, 'sepia': intensity * 0.2}),
+    ]
+
+    # 创建子图
+    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    axes = axes.flatten()
+
+    for i, (title, fade_type, effects) in enumerate(combinations):
+        print(f"Processing: {title}...")
+        if fade_type is None:
+            # 原图
+            result = image
+        else:
+            result = simulate_color_fading(image, fade_type=fade_type,
+                                          intensity=intensity,
+                                          combined_effects=effects)
+
+        axes[i].imshow(result)
+        axes[i].set_title(title, fontsize=11, fontweight='bold')
+        axes[i].axis('off')
+
+    plt.suptitle(f'Combined Fading Effects (Base Intensity={intensity:.2f})',
+                fontsize=14, fontweight='bold')
+    plt.tight_layout()
+
+    # 保存对比图
+    output_filename = os.path.basename(image_path).rsplit('.', 1)[0]
+    output_path = os.path.join(output_dir, f'{output_filename}_combined_comparison.png')
+    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    print(f"\nSaved combined effects comparison to: {output_path}")
+
+    plt.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description='Test color fading effects on your images')
     parser.add_argument('--image', type=str, required=True, help='Path to input image')
     parser.add_argument('--fade_type', type=str, default='mixed',
-                       choices=['uniform', 'saturation', 'brightness', 'yellow', 'sepia', 'mixed'],
+                       choices=['uniform', 'saturation', 'brightness', 'yellow', 'sepia', 'mixed', 'combined'],
                        help='Type of fading effect')
     parser.add_argument('--intensity', type=float, default=0.5,
                        help='Fading intensity (0.0-1.0)')
     parser.add_argument('--output_dir', type=str, default='fading_test_results',
                        help='Output directory for results')
     parser.add_argument('--mode', type=str, default='single',
-                       choices=['single', 'all_types', 'all_intensities'],
-                       help='Test mode: single, all_types, or all_intensities')
+                       choices=['single', 'all_types', 'all_intensities', 'combined'],
+                       help='Test mode: single, all_types, all_intensities, or combined')
+    parser.add_argument('--effects', type=str, default=None,
+                       help='Combined effects in JSON format, e.g., \'{"brightness":0.3,"yellow":0.5}\'\')
 
     args = parser.parse_args()
 
@@ -216,9 +293,21 @@ def main():
     print("Color Fading Test")
     print("=" * 60)
 
+    # 解析组合效果参数
+    combined_effects = None
+    if args.effects:
+        import json
+        try:
+            combined_effects = json.loads(args.effects)
+            print(f"Using custom combined effects: {combined_effects}")
+        except json.JSONDecodeError as e:
+            print(f"Error parsing effects JSON: {e}")
+            print("Using default combined effects")
+
     if args.mode == 'single':
         # 测试单个配置
-        test_single_image(args.image, args.fade_type, args.intensity, args.output_dir)
+        test_single_image(args.image, args.fade_type, args.intensity, args.output_dir,
+                         combined_effects=combined_effects)
 
     elif args.mode == 'all_types':
         # 测试所有褪色类型
@@ -227,6 +316,10 @@ def main():
     elif args.mode == 'all_intensities':
         # 测试所有强度
         test_multiple_intensities(args.image, args.fade_type, args.output_dir)
+
+    elif args.mode == 'combined':
+        # 测试各种组合效果
+        test_combined_effects(args.image, args.intensity, args.output_dir)
 
     print("\n" + "=" * 60)
     print("Test complete!")

@@ -12,7 +12,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 
-def simulate_color_fading(image, fade_type='uniform', intensity=0.5):
+def simulate_color_fading(image, fade_type='uniform', intensity=0.5, combined_effects=None):
     """
     模拟照片颜色褪色效果
 
@@ -24,8 +24,12 @@ def simulate_color_fading(image, fade_type='uniform', intensity=0.5):
             - 'brightness': 亮度降低
             - 'yellow': 泛黄效果（老照片）
             - 'sepia': 棕褐色调（老照片）
-            - 'mixed': 混合多种效果
+            - 'mixed': 随机选择一种效果
+            - 'combined': 组合多种效果（需要提供combined_effects参数）
         intensity: 褪色强度 [0, 1]，0=无褪色，1=完全褪色
+        combined_effects: 组合效果配置，字典格式，例如：
+            {'brightness': 0.3, 'yellow': 0.5, 'sepia': 0.4}
+            表示同时应用三种效果，每种效果有独立的强度
 
     Returns:
         faded_image: 褪色后的图像 [H, W, 3], uint8
@@ -69,10 +73,67 @@ def simulate_color_fading(image, fade_type='uniform', intensity=0.5):
         faded = image * (1 - intensity) + sepia * intensity
 
     elif fade_type == 'mixed':
-        # 随机混合多种效果
+        # 随机选择一种效果
         effects = ['uniform', 'saturation', 'yellow']
         chosen = np.random.choice(effects)
         return simulate_color_fading(image.astype(np.uint8), chosen, intensity)
+
+    elif fade_type == 'combined':
+        # 组合多种效果
+        if combined_effects is None:
+            # 默认组合：模拟真实老照片（亮度降低 + 泛黄 + 棕褐色调）
+            combined_effects = {
+                'brightness': intensity * 0.4,
+                'yellow': intensity * 0.6,
+                'sepia': intensity * 0.3
+            }
+
+        faded = image.copy()
+
+        # 按顺序应用每种效果
+        for effect_type, effect_intensity in combined_effects.items():
+            if effect_intensity > 0:
+                if effect_type == 'brightness':
+                    # 降低亮度
+                    faded = faded * (1 - effect_intensity * 0.3)
+
+                elif effect_type == 'saturation':
+                    # 降低饱和度
+                    hsv = cv2.cvtColor(faded.astype(np.uint8), cv2.COLOR_RGB2HSV).astype(np.float32)
+                    hsv[:, :, 1] = hsv[:, :, 1] * (1 - effect_intensity)
+                    faded = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB).astype(np.float32)
+
+                elif effect_type == 'yellow':
+                    # 泛黄效果
+                    yellow_tint = np.array([
+                        1.0 + effect_intensity * 0.2,
+                        1.0 + effect_intensity * 0.15,
+                        1.0 - effect_intensity * 0.3
+                    ])
+                    faded = faded * yellow_tint
+                    # 同时降低饱和度
+                    hsv = cv2.cvtColor(faded.astype(np.uint8), cv2.COLOR_RGB2HSV).astype(np.float32)
+                    hsv[:, :, 1] = hsv[:, :, 1] * (1 - effect_intensity * 0.5)
+                    faded = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB).astype(np.float32)
+
+                elif effect_type == 'sepia':
+                    # 棕褐色调
+                    sepia_matrix = np.array([
+                        [0.393, 0.769, 0.189],
+                        [0.349, 0.686, 0.168],
+                        [0.272, 0.534, 0.131]
+                    ])
+                    sepia_img = cv2.transform(faded.astype(np.uint8), sepia_matrix).astype(np.float32)
+                    faded = faded * (1 - effect_intensity) + sepia_img * effect_intensity
+
+                elif effect_type == 'uniform':
+                    # 向灰色靠近
+                    gray = cv2.cvtColor(faded.astype(np.uint8), cv2.COLOR_RGB2GRAY)
+                    gray = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB).astype(np.float32)
+                    faded = faded * (1 - effect_intensity) + gray * effect_intensity
+
+        # 裁剪到有效范围
+        faded = np.clip(faded, 0, 255)
 
     else:
         raise ValueError(f"Unknown fade_type: {fade_type}")
