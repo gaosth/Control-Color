@@ -35,48 +35,59 @@ python test_fading.py --image your_photo.jpg --mode combined
 ### 3. 自定义组合效果
 
 ```bash
-# 亮度 + 泛黄
+# 亮度 + 泛黄 (泛黄为主，亮度辅助)
 python test_fading.py \
     --image your_photo.jpg \
     --fade_type combined \
     --intensity 0.6 \
-    --effects '{"brightness":0.3,"yellow":0.5}'
+    --effects '{"brightness":0.5,"yellow":1.0}'
 
-# 泛黄 + 棕褐色
+# 泛黄 + 棕褐色 (泛黄为主)
 python test_fading.py \
     --image your_photo.jpg \
     --fade_type combined \
     --intensity 0.6 \
-    --effects '{"yellow":0.6,"sepia":0.4}'
+    --effects '{"yellow":1.0,"sepia":0.6}'
 
 # 复杂老化效果（4种效果组合）
 python test_fading.py \
     --image your_photo.jpg \
     --fade_type combined \
     --intensity 0.6 \
-    --effects '{"brightness":0.3,"saturation":0.4,"yellow":0.5,"sepia":0.2}'
+    --effects '{"brightness":0.5,"saturation":0.7,"yellow":1.0,"sepia":0.4}'
 ```
 
 ## 组合效果配置
 
 ### 基本语法
 
-使用 JSON 格式指定多种效果及其强度：
+使用 JSON 格式指定多种效果及其**相对比例**：
 
 ```json
 {
-    "effect_type": intensity_value,
-    "effect_type2": intensity_value2
+    "effect_type": ratio_value,
+    "effect_type2": ratio_value2
 }
 ```
 
+**重要**：这些值表示相对比例（0-1），实际强度 = `intensity × ratio_value`
+
+示例：
+```bash
+--intensity 0.6 --effects '{"brightness":0.5,"yellow":1.0}'
+```
+- `brightness` 实际强度：0.6 × 0.5 = 0.3
+- `yellow` 实际强度：0.6 × 1.0 = 0.6
+
 ### 可用的效果类型
 
-- **brightness**: 亮度降低 (建议: 0.2-0.4)
-- **saturation**: 饱和度降低 (建议: 0.3-0.5)
-- **yellow**: 泛黄效果 (建议: 0.4-0.7)
-- **sepia**: 棕褐色调 (建议: 0.2-0.5)
-- **uniform**: 向灰色靠近 (建议: 0.3-0.6)
+这些值表示**相对比例**（0-1），会乘以 `intensity` 得到实际强度。
+
+- **brightness**: 亮度降低 (比例建议: 0.4-0.8)
+- **saturation**: 饱和度降低 (比例建议: 0.5-1.0)
+- **yellow**: 泛黄效果 (比例建议: 0.8-1.0，通常是主效果)
+- **sepia**: 棕褐色调 (比例建议: 0.3-0.7)
+- **uniform**: 向灰色靠近 (比例建议: 0.5-1.0)
 
 ### 推荐配置
 
@@ -86,10 +97,11 @@ python test_fading.py \
 python test_fading.py \
     --image your_photo.jpg \
     --fade_type combined \
-    --effects '{"brightness":0.2,"yellow":0.4}'
+    --intensity 0.4 \
+    --effects '{"brightness":0.5,"yellow":1.0}'
 ```
 
-**效果**：轻微变暗，略微泛黄
+**效果**：轻微变暗（0.4×0.5=0.2），略微泛黄（0.4×1.0=0.4）
 
 #### 2. 中度老化（50-60年代照片）
 
@@ -97,7 +109,8 @@ python test_fading.py \
 python test_fading.py \
     --image your_photo.jpg \
     --fade_type combined \
-    --effects '{"brightness":0.3,"yellow":0.6,"sepia":0.3}'
+    --intensity 0.6 \
+    --effects '{"brightness":0.5,"yellow":1.0,"sepia":0.5}'
 ```
 
 **效果**：明显泛黄，带有棕褐色调
@@ -108,7 +121,8 @@ python test_fading.py \
 python test_fading.py \
     --image your_photo.jpg \
     --fade_type combined \
-    --effects '{"brightness":0.4,"saturation":0.5,"yellow":0.7,"sepia":0.4}'
+    --intensity 0.7 \
+    --effects '{"brightness":0.6,"saturation":0.7,"yellow":1.0,"sepia":0.6}'
 ```
 
 **效果**：严重褪色，强烈的老照片感
@@ -119,7 +133,8 @@ python test_fading.py \
 python test_fading.py \
     --image your_photo.jpg \
     --fade_type combined \
-    --effects '{"saturation":0.7,"sepia":0.6,"brightness":0.4}'
+    --intensity 0.8 \
+    --effects '{"saturation":1.0,"sepia":0.8,"brightness":0.5}'
 ```
 
 **效果**：颜色几乎消失，只剩微弱的棕褐色调
@@ -149,19 +164,20 @@ class ColorRestorationTrain(ColorRestorationDataset):
         # 随机褪色强度
         intensity = np.random.uniform(*self.fade_intensity_range)
 
-        # 定义组合效果（随机选择配置）
+        # 定义组合效果比例配置（随机选择）
+        # 注意：这些是相对比例，实际强度 = intensity × 比例
         configs = [
-            # 配置1: 亮度 + 泛黄
-            {'brightness': intensity * 0.5, 'yellow': intensity * 0.7},
-            # 配置2: 泛黄 + 棕褐色
-            {'yellow': intensity * 0.8, 'sepia': intensity * 0.4},
-            # 配置3: 全面老化
-            {'brightness': intensity * 0.4, 'saturation': intensity * 0.5,
-             'yellow': intensity * 0.6, 'sepia': intensity * 0.3},
+            # 配置1: 亮度 + 泛黄 (泛黄为主)
+            {'brightness': 0.5, 'yellow': 1.0},
+            # 配置2: 泛黄 + 棕褐色 (泛黄为主)
+            {'yellow': 1.0, 'sepia': 0.6},
+            # 配置3: 全面老化 (泛黄为主，其他辅助)
+            {'brightness': 0.6, 'saturation': 0.7,
+             'yellow': 1.0, 'sepia': 0.5},
         ]
 
         # 随机选择一个配置
-        combined_effects = np.random.choice(configs)
+        combined_effects = configs[np.random.randint(len(configs))]
 
         # 应用组合褪色
         faded_image = simulate_color_fading(
@@ -191,33 +207,48 @@ data:
 
 ## 理解效果强度
 
-### intensity vs 单独效果强度
+### intensity vs 效果比例（重要！）
 
-- **intensity**: 总体强度参数，影响噪声等全局效果
-- **单独效果强度**: 每种效果的独立强度
+**新的设计**：`intensity` 作为**全局缩放因子**，`combined_effects` 中的值表示**相对比例**。
+
+- **intensity**: 全局强度（0-1），控制整体褪色程度
+- **combined_effects 中的值**: 各效果的相对比例（0-1）
+
+**实际强度 = intensity × 效果比例**
 
 例如：
 ```python
 intensity = 0.6
-combined_effects = {'brightness': 0.3, 'yellow': 0.5, 'sepia': 0.2}
+combined_effects = {'brightness': 0.5, 'yellow': 1.0, 'sepia': 0.4}
 ```
 
-- `brightness: 0.3` 表示应用 30% 的亮度降低
-- `yellow: 0.5` 表示应用 50% 的泛黄效果
-- `sepia: 0.2` 表示应用 20% 的棕褐色调
-- `intensity: 0.6` 控制添加的噪声强度
+实际应用的强度：
+- `brightness`: 0.6 × 0.5 = **0.3** (30% 亮度降低)
+- `yellow`: 0.6 × 1.0 = **0.6** (60% 泛黄)
+- `sepia`: 0.6 × 0.4 = **0.24** (24% 棕褐色调)
+- 噪声强度也是 0.6
+
+**优势**：
+- 可以通过调整 `intensity` 来**整体调节**所有效果的强度
+- `combined_effects` 只需定义**比例关系**，更容易调整
 
 ### 调整建议
 
-1. **保持平衡**: 不要让所有效果都过强
-   - ❌ `{'brightness': 0.8, 'yellow': 0.9, 'sepia': 0.7}` (太强)
-   - ✅ `{'brightness': 0.3, 'yellow': 0.5, 'sepia': 0.2}` (适中)
+1. **先定义比例，再调整intensity**
+   - 第1步：设定各效果的相对比例 `{'brightness': 0.5, 'yellow': 1.0, 'sepia': 0.4}`
+   - 第2步：调整 `intensity` 控制整体强度（0.3-0.8）
 
-2. **主次分明**: 选择1-2个主要效果，其他作为辅助
-   - ✅ `{'yellow': 0.6, 'sepia': 0.3}` (泛黄为主)
-   - ✅ `{'brightness': 0.4, 'saturation': 0.5, 'yellow': 0.2}` (饱和度为主)
+2. **比例值的含义**
+   - `1.0`: 主要效果（会最强）
+   - `0.5-0.8`: 次要效果（中等强度）
+   - `0.2-0.4`: 辅助效果（轻微）
 
-3. **匹配真实数据**: 观察你的真实老照片，调整参数来匹配
+3. **推荐比例设置**
+   - 泛黄为主: `{'yellow': 1.0, 'brightness': 0.5, 'sepia': 0.3}`
+   - 棕褐色为主: `{'sepia': 1.0, 'yellow': 0.6, 'brightness': 0.4}`
+   - 饱和度降低为主: `{'saturation': 1.0, 'brightness': 0.6, 'yellow': 0.3}`
+
+4. **匹配真实数据**: 观察你的真实老照片，调整参数来匹配
 
 ## 与单一效果对比
 

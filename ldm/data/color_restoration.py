@@ -83,15 +83,18 @@ def simulate_color_fading(image, fade_type='uniform', intensity=0.5, combined_ef
         if combined_effects is None:
             # 默认组合：模拟真实老照片（亮度降低 + 泛黄 + 棕褐色调）
             combined_effects = {
-                'brightness': intensity * 0.4,
-                'yellow': intensity * 0.6,
-                'sepia': intensity * 0.3
+                'brightness': 0.4,
+                'yellow': 0.6,
+                'sepia': 0.3
             }
 
         faded = image.copy()
 
         # 按顺序应用每种效果
-        for effect_type, effect_intensity in combined_effects.items():
+        # intensity 作为全局缩放因子，控制整体强度
+        for effect_type, effect_ratio in combined_effects.items():
+            # 实际强度 = 全局intensity × 效果比例
+            effect_intensity = intensity * effect_ratio
             if effect_intensity > 0:
                 if effect_type == 'brightness':
                     # 降低亮度

@@ -221,18 +221,19 @@ def test_combined_effects(image_path, intensity=0.5, output_dir='fading_test_res
     print(f"Image shape: {image.shape}")
 
     # 不同的组合配置
+    # 注意：effects中的值是相对比例，实际强度 = intensity × 比例
     combinations = [
         ('Original', None, None),
-        ('Brightness + Yellow', 'combined',
-         {'brightness': intensity * 0.5, 'yellow': intensity * 0.6}),
-        ('Yellow + Sepia', 'combined',
-         {'yellow': intensity * 0.6, 'sepia': intensity * 0.4}),
-        ('Brightness + Sepia', 'combined',
-         {'brightness': intensity * 0.4, 'sepia': intensity * 0.5}),
-        ('All Three (B+Y+S)', 'combined',
-         {'brightness': intensity * 0.4, 'yellow': intensity * 0.6, 'sepia': intensity * 0.3}),
-        ('Complex Aging', 'combined',
-         {'brightness': intensity * 0.3, 'saturation': intensity * 0.4, 'yellow': intensity * 0.5, 'sepia': intensity * 0.2}),
+        ('Brightness + Yellow\n(0.5+1.0)', 'combined',
+         {'brightness': 0.5, 'yellow': 1.0}),
+        ('Yellow + Sepia\n(1.0+0.6)', 'combined',
+         {'yellow': 1.0, 'sepia': 0.6}),
+        ('Brightness + Sepia\n(0.6+0.8)', 'combined',
+         {'brightness': 0.6, 'sepia': 0.8}),
+        ('All Three (B+Y+S)\n(0.6+1.0+0.5)', 'combined',
+         {'brightness': 0.6, 'yellow': 1.0, 'sepia': 0.5}),
+        ('Complex Aging\n(0.5+0.7+1.0+0.4)', 'combined',
+         {'brightness': 0.5, 'saturation': 0.7, 'yellow': 1.0, 'sepia': 0.4}),
     ]
 
     # 创建子图

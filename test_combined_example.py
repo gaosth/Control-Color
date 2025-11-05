@@ -28,6 +28,7 @@ def demo_combined_effects(image_path):
     image = np.array(image).astype(np.uint8)
 
     # 定义不同的组合配置
+    # 注意：combined模式中effects的值是相对比例，实际强度 = intensity × 比例
     configs = [
         {
             'name': '原图',
@@ -39,32 +40,32 @@ def demo_combined_effects(image_path):
             'intensity': 0.6,
         },
         {
-            'name': '组合：亮度+泛黄',
+            'name': '组合：亮度+泛黄\n(0.6×[0.5,1.0])',
             'fade_type': 'combined',
             'intensity': 0.6,
-            'effects': {'brightness': 0.3, 'yellow': 0.5}
+            'effects': {'brightness': 0.5, 'yellow': 1.0}
         },
         {
-            'name': '组合：泛黄+棕褐色',
+            'name': '组合：泛黄+棕褐色\n(0.6×[1.0,0.6])',
             'fade_type': 'combined',
             'intensity': 0.6,
-            'effects': {'yellow': 0.6, 'sepia': 0.4}
+            'effects': {'yellow': 1.0, 'sepia': 0.6}
         },
         {
-            'name': '组合：亮度+泛黄+棕褐色',
+            'name': '组合：亮度+泛黄+棕褐色\n(0.6×[0.6,1.0,0.5])',
             'fade_type': 'combined',
             'intensity': 0.6,
-            'effects': {'brightness': 0.4, 'yellow': 0.6, 'sepia': 0.3}
+            'effects': {'brightness': 0.6, 'yellow': 1.0, 'sepia': 0.5}
         },
         {
-            'name': '组合：复杂老化\n(B+S+Y+Sepia)',
+            'name': '组合：复杂老化\n(0.6×[0.5,0.7,1.0,0.4])',
             'fade_type': 'combined',
             'intensity': 0.6,
             'effects': {
-                'brightness': 0.3,
-                'saturation': 0.4,
-                'yellow': 0.5,
-                'sepia': 0.2
+                'brightness': 0.5,
+                'saturation': 0.7,
+                'yellow': 1.0,
+                'sepia': 0.4
             }
         },
     ]
