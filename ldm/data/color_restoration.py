@@ -201,7 +201,7 @@ class ColorRestorationDataset(Dataset):
     4. 训练模型：褪色图 + 颜色hint -> 原始图
     """
     def __init__(self,
-                 image_list_file,
+                 image_list_file=None,       # 图片列表文件（None时需手动设置image_paths）
                  size=512,
                  random_crop=True,
                  fade_type='mixed',           # 褪色类型
@@ -211,10 +211,13 @@ class ColorRestorationDataset(Dataset):
         super().__init__()
 
         # 读取图片路径
-        with open(image_list_file, "r") as f:
-            self.image_paths = f.read().splitlines()
-
-        print(f"Loaded {len(self.image_paths)} images for color restoration")
+        if image_list_file is not None:
+            with open(image_list_file, "r") as f:
+                self.image_paths = f.read().splitlines()
+            print(f"Loaded {len(self.image_paths)} images for color restoration")
+        else:
+            # 允许后续手动设置 image_paths（用于测试）
+            self.image_paths = []
 
         self.size = size
         self.random_crop = random_crop
@@ -381,7 +384,7 @@ class ColorRestorationTrain(ColorRestorationDataset):
             image_list_file=training_images_list_file,
             size=size,
             random_crop=True,
-            fade_type='mixed',              # 混合多种褪色效果
+            fade_type='combined',           # 组合多种褪色效果
             fade_intensity_range=(0.3, 0.8),  # 中等到强烈褪色
             use_color_hint=True,
             use_augmentation=True
