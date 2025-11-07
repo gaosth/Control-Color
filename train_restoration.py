@@ -358,8 +358,22 @@ def main():
 
     # 多卡训练提示和策略设置
     if len(gpus) > 1:
-        trainer_kwargs["strategy"] = "ddp_find_unused_parameters_true"
-        print(f"\n使用 {len(gpus)} 张GPU进行分布式训练 (DDP模式)")
+        # 根据PyTorch Lightning版本设置DDP策略
+        try:
+            from pytorch_lightning.strategies import DDPStrategy
+            # 新版本：使用DDPStrategy对象
+            trainer_kwargs["strategy"] = DDPStrategy(find_unused_parameters=True)
+            print(f"\n使用 {len(gpus)} 张GPU进行分布式训练 (DDP模式 - DDPStrategy)")
+        except ImportError:
+            # 旧版本：使用字符串
+            try:
+                # 尝试使用 'ddp'
+                trainer_kwargs["strategy"] = "ddp"
+                print(f"\n使用 {len(gpus)} 张GPU进行分布式训练 (DDP模式 - ddp)")
+            except:
+                # 如果都不行，不设置strategy，让Lightning自动选择
+                print(f"\n使用 {len(gpus)} 张GPU进行分布式训练 (DDP模式 - auto)")
+
         print(f"GPU设备: {gpus}")
         print(f"每张GPU的batch size: {opt.batch_size}")
         print(f"实际总batch size: {opt.batch_size * len(gpus)}\n")
