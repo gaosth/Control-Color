@@ -74,30 +74,22 @@ def prepare_batch_for_inference(image_rgb, is_faded=True, fade_type='combined', 
     mask = np.ones((H, W, 1), dtype=np.float32)
 
     # 转换为torch tensors并添加batch维度
-    # 重要：确保维度顺序正确！
-    # numpy: [H, W, 3] -> torch: [1, 3, H, W]
+    # 重要：保持 [batch, height, width, channels] 格式
+    # get_input() 会自动使用 rearrange 转换为 [batch, channels, height, width]
 
-    jpg_tensor = torch.from_numpy(original_image)  # [H, W, 3]
-    jpg_tensor = jpg_tensor.permute(2, 0, 1)  # [3, H, W]
-    jpg_tensor = jpg_tensor.unsqueeze(0)  # [1, 3, H, W]
+    jpg_tensor = torch.from_numpy(original_image).unsqueeze(0)  # [H, W, 3] -> [1, H, W, 3]
+    hint_tensor = torch.from_numpy(color_hint).unsqueeze(0)  # [H, W, 3] -> [1, H, W, 3]
+    mask_img_tensor = torch.from_numpy(faded_image).unsqueeze(0)  # [H, W, 3] -> [1, H, W, 3]
+    mask_tensor = torch.from_numpy(mask).unsqueeze(0)  # [H, W, 1] -> [1, H, W, 1]
 
-    hint_tensor = torch.from_numpy(color_hint)  # [H, W, 3]
-    hint_tensor = hint_tensor.unsqueeze(0)  # [1, H, W, 3]
-
-    mask_img_tensor = torch.from_numpy(faded_image)  # [H, W, 3]
-    mask_img_tensor = mask_img_tensor.unsqueeze(0)  # [1, H, W, 3]
-
-    mask_tensor = torch.from_numpy(mask)  # [H, W, 1]
-    mask_tensor = mask_tensor.unsqueeze(0)  # [1, H, W, 1]
-
-    # 构建batch
+    # 构建batch - 所有图像张量都是 [1, H, W, C] 格式！
     batch = {
-        'jpg': jpg_tensor.contiguous(),  # [1, 3, H, W] - 正确的通道顺序！
+        'jpg': jpg_tensor.contiguous(),  # [1, H, W, 3]
         'txt': [f"restore faded photo, intensity {intensity:.2f}"],
         'hint': hint_tensor.contiguous(),  # [1, H, W, 3]
         'mask_img': mask_img_tensor.contiguous(),  # [1, H, W, 3]
         'mask': mask_tensor.contiguous(),  # [1, H, W, 1]
-        'faded': mask_img_tensor.contiguous(),  # [1, H, W, 3] 用于对比
+        'faded': mask_img_tensor.contiguous(),  # [1, H, W, 3]
     }
 
     return batch, faded_image, original_image
