@@ -124,11 +124,23 @@ def restore_faded_image(
         if color_hint is None:
             color_hint = extract_color_mask(faded_image, mask_type='faded_color')
 
+        # 确保输入图片是正确的格式
+        if len(faded_image.shape) == 2:
+            # 灰度图，转换为RGB
+            faded_image = np.stack([faded_image] * 3, axis=-1)
+        elif len(faded_image.shape) != 3 or faded_image.shape[2] != 3:
+            raise ValueError(f"Unexpected faded_image shape: {faded_image.shape}")
+
         H_ori, W_ori, C_ori = faded_image.shape
 
         # 2. Resize
         faded_resized = resize_image(faded_image, image_resolution)
         hint_resized = resize_image(color_hint, image_resolution)
+
+        # 确保 resize 后格式正确
+        if len(faded_resized.shape) == 2:
+            faded_resized = np.stack([faded_resized] * 3, axis=-1)
+
         H, W, C = faded_resized.shape
 
         # 3. 准备mask
@@ -140,9 +152,17 @@ def restore_faded_image(
             mask = np.ones((H, W, 1), dtype=np.float32)
 
         # 4. 准备masked image
+        # 确保 hint_resized 是正确的格式 (uint8, H, W, 3)
+        if hint_resized.dtype != np.uint8:
+            hint_resized = hint_resized.astype(np.uint8)
+        if len(hint_resized.shape) == 2:
+            hint_resized = np.stack([hint_resized] * 3, axis=-1)
+        elif hint_resized.shape[2] != 3:
+            raise ValueError(f"Unexpected hint shape: {hint_resized.shape}")
+
         mask_tensor, masked_image = prepare_mask_and_masked_image(
             Image.fromarray(hint_resized),
-            Image.fromarray((mask * 255).astype(np.uint8))
+            Image.fromarray((mask * 255).astype(np.uint8).squeeze())
         )
 
         # 5. Encode mask
@@ -319,7 +339,20 @@ def main():
                 error_count += 1
                 continue
 
-            input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2RGB)
+            # 确保图片是3通道RGB格式
+            if len(input_image.shape) == 2:
+                # 灰度图，转换为RGB
+                input_image = cv2.cvtColor(input_image, cv2.COLOR_GRAY2RGB)
+            elif input_image.shape[2] == 4:
+                # RGBA图，转换为RGB（去除alpha通道）
+                input_image = cv2.cvtColor(input_image, cv2.COLOR_BGRA2RGB)
+            elif input_image.shape[2] == 3:
+                # BGR图，转换为RGB
+                input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2RGB)
+            else:
+                print(f"\n⚠️  Warning: Unsupported image format for {img_path.name} (shape: {input_image.shape}), skipping...")
+                error_count += 1
+                continue
 
             # 如果输入不是褪色图，先模拟褪色
             if not args.is_faded:
